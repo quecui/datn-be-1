@@ -13,8 +13,8 @@
     <configVersion>2</configVersion>
     <userRemoteConfigs>
       <hudson.plugins.git.UserRemoteConfig>
-        <url>https://github.com/nhs3108/SpringWebDemo.git</url>
-        <credentialsId>867bfe13-043d-41ab-b37f-c2bca486f1c6</credentialsId>
+        <url>https://github.com/quecui/testJunit.git</url>
+<credentialsId>d02b13e3-6cea-47f1-b63d-6ac2c21ae5db</credentialsId>
       </hudson.plugins.git.UserRemoteConfig>
     </userRemoteConfigs>
     <branches>

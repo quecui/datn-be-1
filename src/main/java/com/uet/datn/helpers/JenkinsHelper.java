@@ -9,6 +9,7 @@ public class JenkinsHelper {
     public final String JENKINS_URL = "http://localhost:8080";
     public final String USERNAME = "admin";
     public final String PASSWORD = "hunghp1502";
+    public final String CREDENTIAL_ID = "d02b13e3-6cea-47f1-b63d-6ac2c21ae5db";
     public enum Action {CREATE, ENABLE, DISABLE, DELETE, UPDATE, VIEW};
 
     private final String JOB = "/api/json?tree=jobs[name,color,url,description]";
@@ -84,4 +85,8 @@ public class JenkinsHelper {
     public String getConfigXmlUrl(String jobName){
         return JENKINS_URL + "/job/" + jobName + "/config.xml";
     }
+
+//    public String getCredentialUrl(){
+//        return JENKINS_URL +
+//    }
 }

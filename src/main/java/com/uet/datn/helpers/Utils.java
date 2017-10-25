@@ -10,12 +10,14 @@ import java.util.List;
 public class Utils {
 
     public boolean writeFile(String fileName, List<String> content) throws IOException {
-        File file = new File("upload-dir/" + fileName);
+        if (content.size() == 0)
+            return false;
 
+        File file = new File(fileName);
         BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 
         for (String str:content){
-            bw.write(content + "\n");
+            bw.write(str + "\n");
         }
         bw.close();
 
@@ -23,7 +25,7 @@ public class Utils {
     }
 
     public boolean writeFile(String fileName, String content) throws IOException {
-        File file = new File("upload-dir/" + fileName);
+        File file = new File(fileName);
 
         if (!file.exists()){
             file.createNewFile();
@@ -39,7 +41,7 @@ public class Utils {
     public List<String> readFile(String fileName) throws IOException {
         List<String> strs = new ArrayList<String>();
 
-        File file = new File("upload-dir/" + fileName);
+        File file = new File(fileName);
         BufferedReader br = new BufferedReader(new FileReader(file));
 
         String inLine = "";
