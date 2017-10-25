@@ -44,12 +44,6 @@ public class JenkinsHelper {
 
             case DISABLE: return JENKINS_URL + "/job/" + jobName + "/disable";
 
-            default: return "No Matched";
-        }
-    }
-
-    public String getDescriptionUrl(String jobName, Action action){
-        switch (action){
             case UPDATE: return JENKINS_URL + "/job/" + jobName + "/config.xml";
 
             case VIEW: return JENKINS_URL + "/job/demo/description";

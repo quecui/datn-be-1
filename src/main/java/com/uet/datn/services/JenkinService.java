@@ -156,7 +156,7 @@ public class JenkinService {
     }
 
     public String updateDescription(String jobName, String newDescription) throws IOException {
-        String url = helper.getDescriptionUrl(jobName, JenkinsHelper.Action.UPDATE);
+        String url = helper.getJobUrl(jobName, JenkinsHelper.Action.UPDATE);
         newDescription = "<description>" + newDescription + "</description>";
 
         List<String> content = updateByField("description", newDescription);
