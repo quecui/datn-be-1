@@ -25,14 +25,14 @@ public class Controller {
     @Autowired
     private JenkinService jenkinService;
 
-    @RequestMapping(value = "/upload", method = RequestMethod.POST)
+    @RequestMapping(value = "/jenkins/file", method = RequestMethod.POST)
     public String uploadFile(@RequestParam("file") MultipartFile file) {
         return storageService.store(file);
     }
 
-    @RequestMapping(value = "/process", method = RequestMethod.GET)
-    public String processFile(){
-        return mainService.process();
+    @RequestMapping(value = "/jenkins/jobs/{jobName}/file", method = RequestMethod.GET)
+    public String processFile(@PathVariable("jobName") String jobName, int flag) throws IOException, InterruptedException {
+        return mainService.process(jobName, flag);
     }
 
     @RequestMapping(value = "/jenkins/jobs", method = RequestMethod.GET)
@@ -65,6 +65,21 @@ public class Controller {
     @RequestMapping(value = "/jenkins/jobs/{jobName}/{description}", method = RequestMethod.POST)
     public String updateDescription(@PathVariable("jobName") String jobName, @PathVariable("description") String description) throws IOException {
         return jenkinService.updateDescription(jobName, description);
+    }
+
+    @RequestMapping(value = "/jenkins/jobs/{jobName}", method = RequestMethod.DELETE)
+    public String deleteJob(@PathVariable("jobName") String jobName) throws IOException {
+        return jenkinService.deleteJob(jobName);
+    }
+
+    @RequestMapping(value = "/jenkins/jobs/{jobName}/build", method = RequestMethod.GET)
+    public String buildJob(@PathVariable("jobName") String jobName) throws IOException {
+        return jenkinService.buildNow(jobName);
+    }
+
+    @RequestMapping(value = "/jenkins/jobs/{jobName}/schedule/{value}", method = RequestMethod.POST)
+    public String scheduleSCMPolling(@PathVariable("jobName") String jobName, @PathVariable("value") String value) throws IOException {
+        return jenkinService.scheduleSCMPolling(jobName, value);
     }
 
 }

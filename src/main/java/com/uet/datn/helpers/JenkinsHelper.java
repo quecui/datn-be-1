@@ -9,7 +9,8 @@ public class JenkinsHelper {
     public final String JENKINS_URL = "http://localhost:8080";
     public final String USERNAME = "admin";
     public final String PASSWORD = "hunghp1502";
-    public final String CREDENTIAL_ID = "d02b13e3-6cea-47f1-b63d-6ac2c21ae5db";
+//    public final String CREDENTIAL_ID = "d02b13e3-6cea-47f1-b63d-6ac2c21ae5db";
+    public final String CREDENTIAL_ID = "867bfe13-043d-41ab-b37f-c2bca486f1c6";
     public enum Action {CREATE, ENABLE, DISABLE, DELETE, UPDATE, VIEW};
 
     private final String JOB = "/api/json?tree=jobs[name,color,url,description]";

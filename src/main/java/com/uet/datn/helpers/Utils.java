@@ -1,5 +1,6 @@
 package com.uet.datn.helpers;
 
+import com.uet.datn.models.Student;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
@@ -8,6 +9,21 @@ import java.util.List;
 
 @Component
 public class Utils {
+
+    public boolean writeFile(List<Student> students, String fileName) throws IOException {
+        String inLine = "";
+
+        File file = new File(fileName);
+        BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+
+        for (int i = 0; i < students.size(); i++){
+            inLine = (i + 1) + ". " + students.get(i).getStudentName() + " \n " + students.get(i).getSuccesseTask() + " \n " + students.get(i).getErrorMessage();
+            bw.write(inLine + "\n");
+        }
+        bw.close();
+
+        return true;
+    }
 
     public boolean writeFile(String fileName, List<String> content) throws IOException {
         if (content.size() == 0)

@@ -9,10 +9,12 @@ import com.uet.datn.models.jenkins.JobDetail;
 import com.uet.datn.models.jenkins.ListJob;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,9 +42,16 @@ public class JenkinService {
 
     private String CSRFToken = "";
     private String CSRFKey = "";
-    private DefaultHttpClient client;;
+    private DefaultHttpClient client;
     private BasicHttpContext context;
     private int maxBuild;
+
+    public JenkinService(){
+        credential = new Credential();
+        helper = new JenkinsHelper();
+        utils = new Utils();
+        init();
+    }
 
     public void init(){
         client = credential.setCredentialForJenkins(helper.USERNAME, helper.PASSWORD);
@@ -114,8 +123,8 @@ public class JenkinService {
     }
 
     public String getLogJob(String jobName, int index){
-        if (index > maxBuild || index == 0)
-            return "Over Max Size";
+//        if (index > maxBuild || index == 0)
+//            return "Over Max Size";
 
         String log = "";
 
@@ -132,6 +141,7 @@ public class JenkinService {
             System.out.println(e.getMessage());
         }
 
+        System.out.println("get Log Sucess!!");
         return log;
     }
 
@@ -159,8 +169,7 @@ public class JenkinService {
         String url = helper.getJobUrl(jobName, JenkinsHelper.Action.UPDATE);
         newDescription = "<description>" + newDescription + "</description>";
 
-        List<String> content = updateByField("description", newDescription);
-        if (!utils.writeFile("upload-dir/config.xml", content))
+        if (updateByField("description", newDescription).equals("failure"))
             return "failure";
 
         HttpPost postReq = new HttpPost(url);
@@ -182,8 +191,32 @@ public class JenkinService {
         }
     }
 
-    public List<String> updateByField(String fieldName, String newValue) throws IOException {
+    public String updateConfig(String jobName) throws IOException {
+        String url = helper.getJobUrl(jobName, JenkinsHelper.Action.UPDATE);
+
+        HttpPost postReq = new HttpPost(url);
+        postReq.setHeader(CSRFKey, CSRFToken);
+        postReq.setHeader("Content-Type", "text/xml");
+
+        File file = new File("upload-dir/config.xml");
+        byte[] bFile = Files.readAllBytes(file.toPath());
+        HttpEntity entity = new ByteArrayEntity(bFile);
+        postReq.setEntity(entity);
+
+        HttpResponse response = client.execute(postReq, context);
+        int status = response.getStatusLine().getStatusCode();
+
+        if (status == 200){
+            return "success";
+        }else {
+            return "failure";
+        }
+    }
+
+    public String updateByField(String fieldName, String newValue) throws IOException {
         List<String> contents = utils.readFile("config-dir/config.xml");
+
+        boolean isAddNew = true;
 
         for (int i = 0; i < contents.size(); i++){
             String tmp = contents.get(i);
@@ -202,24 +235,32 @@ public class JenkinService {
             String childTmp = tmp.substring(start, end);
             if (childTmp.equals(fieldName)){
                 contents = utils.replace(contents, i, newValue);
-                return contents;
+                isAddNew = false;
             }
         }
 
-        return new ArrayList<String>();
+        if (isAddNew){
+            int maxSize = contents.size() - 1;
+            String tmp = contents.get(maxSize);
+            contents.remove(maxSize);
+            contents.add(newValue);
+            contents.add(tmp);
+        }
+
+        if (!utils.writeFile("config-dir/config.xml", contents))
+            return "failure";
+        return "success";
     }
 
     public String createJob(String jobName) throws IOException {
-//        CSRFKey = "Jenkins-Crumb";
-//        CSRFToken = "e4dda56a4142808e3c946b6d337ca467";
-//        helper = new JenkinsHelper();
-//        credential = new Credential();
-//        client = credential.setCredentialForJenkins(helper.USERNAME, helper.PASSWORD);
-//        context = credential.setContext();
 
         String url = helper.getJobUrl(jobName, JenkinsHelper.Action.CREATE);
 
         if (!updateCredentialIdToXml().equals("success"))
+            return "failure";
+
+        String buildToken = "<authToken>stormspirit</authToken>";
+        if(updateByField("authToken", buildToken).equals("failure"))
             return "failure";
 
         HttpPost postReq = new HttpPost(url);
@@ -246,18 +287,79 @@ public class JenkinService {
     private String updateCredentialIdToXml() throws IOException {
         String adminCredentialId = "<credentialsId>" + helper.CREDENTIAL_ID + "</credentialsId>";
 
-        List<String> content = updateByField("credentialsId", adminCredentialId);
-        if (!utils.writeFile("config-dir/config.xml", content))
-            return "failure";
-
-        return "success";
+        return updateByField("credentialsId", adminCredentialId);
     }
 
+    public String deleteJob(String jobName) throws IOException {
+        String url = helper.JENKINS_URL + helper.getJobUrl(jobName, JenkinsHelper.Action.DELETE);
+        HttpPost postReq = new HttpPost(url);
+        postReq.setHeader(CSRFKey, CSRFToken);
+
+        HttpResponse response = client.execute(postReq, context);
+        int status = response.getStatusLine().getStatusCode();
+
+        if (status == 302){
+            System.out.println("Delete Successfully !");
+            return "success";
+        }
+
+        System.out.println("Job doesn't exist");
+        return "failure";
+    }
+
+    public String buildNow(String jobName) throws IOException {
+        String buildToken = "stack";
+        String urlJob = helper.JENKINS_URL + "/job/" + jobName + "/build?token=" + buildToken;
+
+        HttpGet getRequest = new HttpGet(urlJob);
+        HttpResponse response = client.execute(getRequest, context);
+        int status = response.getStatusLine().getStatusCode();
+
+        if (status == 201){
+            System.out.println("Job: " + jobName.toUpperCase() + " has built !!!");
+            return "success";
+        }else{
+            System.out.println("Exception !!!");
+            return "failure";
+        }
+    }
+
+    // * * * * * : Build moi 5 phut
+    // 20 16-17/1 * * 1-5: build moi 1 h 1 lan bat dau tu 16h20 - 17h20 cac ngay trong tuan
+    public String scheduleSCMPolling(String jobName, String value) throws IOException {
+        switch (value){
+            case "1": value = "* * * * *"; break;
+
+            case "2": value = "20 16-17/1 * * 1-5"; break;
+
+            default: return "failure";
+        }
+
+        String url = helper.JENKINS_URL + "/job/" + jobName + "/polling";
+
+        HttpPost postReq = new HttpPost(url);
+        postReq.setHeader(CSRFKey, CSRFToken);
+        List params = new ArrayList();
+        params.add(new BasicNameValuePair("_.scmpoll_spec", value));
+        UrlEncodedFormEntity paramEntity = new UrlEncodedFormEntity(params);
+
+        postReq.setEntity(paramEntity);
+        HttpResponse response = client.execute(postReq, context);
+        int status = response.getStatusLine().getStatusCode();
+
+        if (status == 200)
+            return "success";
+
+        return "failure";
+    }
 
     public static void main(String[] args) throws IOException {
         JenkinService jenkinService = new JenkinService();
-        System.out.println(jenkinService.updateCredentialIdToXml());
-        jenkinService.createJob("test123");
+
+        jenkinService.init();
+        jenkinService.createJob("hungpham2");
     }
+
+
 
 }
