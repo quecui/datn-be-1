@@ -8,7 +8,7 @@
     <userRemoteConfigs>
       <hudson.plugins.git.UserRemoteConfig>
 <url>https://github.com/nhs3108/SpringWebDemo122.git</url>
-        <credentialsId>867bfe13-043d-41ab-b37f-c2bca486f1c6</credentialsId>
+<credentialsId>867bfe13-043d-41ab-b37f-c2bca486f1c6</credentialsId>
       </hudson.plugins.git.UserRemoteConfig>
     </userRemoteConfigs>
     <branches>
@@ -24,7 +24,7 @@
   <disabled>false</disabled>
   <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
   <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
-  <authToken>stormspirit</authToken>
+<authToken>stormspirit</authToken>
   <triggers/>
   <concurrentBuild>false</concurrentBuild>
   <builders/>

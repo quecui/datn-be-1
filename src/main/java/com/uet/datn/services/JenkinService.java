@@ -100,16 +100,16 @@ public class JenkinService {
         return jobs;
     }
 
-    public JobDetail getJobDetail(String jobName){
+    public String getJobDetail(String jobName){
         JobDetail jobDetail = new JobDetail();
-
+        String json = "";
         try {
             String url = helper.getJobDetailUrl(jobName);
 
             HttpGet getReq = new HttpGet(url);
             HttpResponse response = client.execute(getReq, context);
             HttpEntity entity = response.getEntity();
-            String json = EntityUtils.toString(response.getEntity());
+            json = EntityUtils.toString(response.getEntity());
 
             ObjectMapper mapper = new ObjectMapper();
             jobDetail = mapper.readValue(json, JobDetail.class);
@@ -119,7 +119,7 @@ public class JenkinService {
             System.out.println(e.getMessage());
         }
 
-        return jobDetail;
+        return json;
     }
 
     public String getLogJob(String jobName, int index){
@@ -143,6 +143,10 @@ public class JenkinService {
 
         System.out.println("get Log Sucess!!");
         return log;
+    }
+
+    public String[] formatLog(String log){
+        return log.split("\r\n");
     }
 
     public String getAndWriteXmlFile(String jobName){
@@ -291,7 +295,8 @@ public class JenkinService {
     }
 
     public String deleteJob(String jobName) throws IOException {
-        String url = helper.JENKINS_URL + helper.getJobUrl(jobName, JenkinsHelper.Action.DELETE);
+        String url = helper.getJobUrl(jobName, JenkinsHelper.Action.DELETE);
+        System.out.println(url);
         HttpPost postReq = new HttpPost(url);
         postReq.setHeader(CSRFKey, CSRFToken);
 

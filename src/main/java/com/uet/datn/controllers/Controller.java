@@ -1,5 +1,6 @@
 package com.uet.datn.controllers;
 
+import com.uet.datn.dto.ScheduleDTO;
 import com.uet.datn.models.jenkins.Job;
 import com.uet.datn.models.jenkins.JobDetail;
 import com.uet.datn.models.jenkins.ListJob;
@@ -8,12 +9,18 @@ import com.uet.datn.services.JenkinService;
 import com.uet.datn.services.MainService;
 import com.uet.datn.services.StorageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:8090")
 @RestController
 public class Controller {
     @Autowired
@@ -41,7 +48,7 @@ public class Controller {
     }
 
     @RequestMapping(value = "/jenkins/jobs/{jobName}", method = RequestMethod.GET)
-    public JobDetail showDetail(@PathVariable("jobName") String jobName){
+    public String showDetail(@PathVariable("jobName") String jobName){
         return jenkinService.getJobDetail(jobName);
     }
 
@@ -53,8 +60,8 @@ public class Controller {
     }
 
     @RequestMapping(value = "/jenkins/jobs/{jobName}/logs/{index}", method = RequestMethod.GET)
-    public String getLogDetail(@PathVariable("jobName") String jobName, @PathVariable("index") int index){
-        return jenkinService.getLogJob(jobName, index);
+    public String[] getLogDetail(@PathVariable("jobName") String jobName, @PathVariable("index") int index){
+        return jenkinService.formatLog(jenkinService.getLogJob(jobName, index));
     }
 
     @RequestMapping(value = "/jenkins/jobs/{jobName}/config", method = RequestMethod.GET)
@@ -72,7 +79,7 @@ public class Controller {
         return jenkinService.deleteJob(jobName);
     }
 
-    @RequestMapping(value = "/jenkins/jobs/{jobName}/build", method = RequestMethod.GET)
+    @RequestMapping(value = "/jenkins/jobs/{jobName}/build", method = RequestMethod.POST)
     public String buildJob(@PathVariable("jobName") String jobName) throws IOException {
         return jenkinService.buildNow(jobName);
     }
@@ -80,6 +87,12 @@ public class Controller {
     @RequestMapping(value = "/jenkins/jobs/{jobName}/schedule/{value}", method = RequestMethod.POST)
     public String scheduleSCMPolling(@PathVariable("jobName") String jobName, @PathVariable("value") String value) throws IOException {
         return jenkinService.scheduleSCMPolling(jobName, value);
+    }
+
+    @RequestMapping(value = "/jenkins/jobs/{jobName}/schedule", method = RequestMethod.POST)
+    public String scheduleSCMPoll(@RequestBody ScheduleDTO scheduleDTO){
+        System.out.println(scheduleDTO.getDay());//format data.
+        return "ok";
     }
 
 }
