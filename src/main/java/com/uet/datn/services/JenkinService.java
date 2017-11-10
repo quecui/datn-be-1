@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -70,6 +71,10 @@ public class JenkinService {
     public void init1(){
         client = credential.setCredentialForJenkins(helper.USERNAME, helper.PASSWORD);
         context = credential.setContext();
+    }
+
+    public List<String> getHistory(String jobName) throws IOException {
+        return utils.readFile(jobName);
     }
 
     private String getCSRFToken(){
@@ -400,44 +405,141 @@ public class JenkinService {
         return json;
     }
 
+
+//    <triggers>
+//<hudson.triggers.SCMTrigger>
+//<spec>* * * * *</spec>
+//<ignorePostCommitHooks>false</ignorePostCommitHooks>
+//</hudson.triggers.SCMTrigger>
+//</triggers>
+
     // * * * * * : Build moi 5 phut
     // 20 16-17/1 * * 1-5: build moi 1 h 1 lan bat dau tu 16h20 - 17h20 cac ngay trong tuan
     public String scheduleSCMPolling(String jobName, String value) throws IOException {
+        String json = getConfig(jobName);
+        String[] xmls = json.split("\n");
 
-        String url = helper.JENKINS_URL + "/job/" + jobName + "/polling";
+        boolean isTrigger = false;
+        boolean isExist = false;
+        int triggerIndex = 0;
+        for (int i = 0; i < xmls.length; i++){
+            String tmp = xmls[i];
+            if (tmp.length() == 10 && tmp.substring(1, 10).equals("triggers")){
+                isTrigger = true;
+                triggerIndex = i;
+            }
 
-        HttpPost postReq = new HttpPost(url);
-        postReq.setHeader(CSRFKey, CSRFToken);
-        List params = new ArrayList();
-        params.add(new BasicNameValuePair("_.scmpoll_spec", value));
-        UrlEncodedFormEntity paramEntity = new UrlEncodedFormEntity(params);
+            if(isTrigger == true && tmp.substring(1, 5).equals("spec") && tmp.charAt(5) != '/'){
+                xmls[i] = "<spec>" + value +"</spec>";
+                isExist = true;
+                break;
+            }
+        }
 
-        postReq.setEntity(paramEntity);
-        HttpResponse response = client.execute(postReq, context);
-        int status = response.getStatusLine().getStatusCode();
+        if (isTrigger && isExist) {
+            //todo: Noi phan tu thanh string
+            String ok = covertFromXML(new ArrayList<String>(Arrays.asList(xmls)));
+            utils.writeFile("config.xml", ok);
+            updateConfig(jobName);
+            utils.deleteFile("config.xml");
+            return "ok";
 
-        if (status == 200)
-            return "success";
+        }
 
+        ArrayList<String> xmlsList = new ArrayList<>(Arrays.asList(xmls));
+        ArrayList<String> component = triggerComponent(value, isTrigger);
+        if (isTrigger == false){
+            xmlsList.remove("</project>");
+            for(String str:component){
+                xmlsList.add(str);
+            }
+            xmlsList.add("</project>");
+            //todo: Noi
+            String ok = covertFromXML(xmlsList);
+            utils.writeFile("config.xml", ok);
+            updateConfig(jobName);
+            utils.deleteFile("config.xml");
+            return "ok";
+        }
+
+        if (isTrigger == true){
+            for(int i = component.size() - 1; i >=0; i--){
+                xmlsList.add(triggerIndex + 1, component.get(i));
+            }
+
+            String ok = covertFromXML(xmlsList);
+            utils.writeFile("config.xml", ok);
+            updateConfig(jobName);
+            utils.deleteFile("config.xml");
+            return "ok";
+        }
+
+
+        //todo: fix
         return "failure";
     }
 
-    public void processSchedule(ScheduleDTO scheduleDTO) throws IOException {
+    private static String covertFromXML(ArrayList<String> xml){
+        String result = "";
+        for(int i = 0; i < xml.size(); i++){
+            result += xml.get(i);
+            if (i + 1 < xml.size()) {
+                result += "\n";
+            }
+        }
+
+        return result;
+    }
+
+    private ArrayList<String> triggerComponent(String value, boolean flag){
+        ArrayList<String> trigger = new ArrayList<>();
+
+        if (flag == false){
+            trigger.add("<triggers>");
+        }
+
+        trigger.add("<hudson.triggers.SCMTrigger>");
+        trigger.add("<spec>" + value +"</spec>");
+        trigger.add("<ignorePostCommitHooks>false</ignorePostCommitHooks>");
+        trigger.add("</hudson.triggers.SCMTrigger>");
+
+        if(flag == false){
+            trigger.add("</triggers>");
+        }
+
+        return trigger;
+    }
+
+
+    private String getConfig(String jobName) throws IOException {
+        String url = "http://localhost:8080/jobs/" + jobName + "/config.xml";
+        HttpGet req = new HttpGet(url);
+        req.setHeader(CSRFKey, CSRFToken);
+        HttpResponse response = client.execute(req, context);
+        HttpEntity entity = response.getEntity();
+        String json = EntityUtils.toString(response.getEntity());
+        return json;
+    }
+
+    public void processSchedule(ScheduleDTO scheduleDTO, boolean isRepeat) throws IOException {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
         String currentDate = simpleDateFormat.format(new Date()).toString();
         if(currentDate.equals(scheduleDTO.getDay())){
             String timeData = processTimeData(scheduleDTO.getHour(), scheduleDTO.getValueRepeat());
             scheduleSCMPolling(scheduleDTO.getJobName(), timeData);
         }else {
-            writeFile(scheduleDTO);
-            //toDo: Ham lap lich
+            if(isRepeat == false){
+                writeFile(scheduleDTO);
+                //toDo: Ham lap lich -> xong
+            }
+
         }
     }
 
-
+    //todo: sap xep folder cac thanh phan
     private void writeFile(ScheduleDTO scheduleDTO) throws IOException {
         String value = scheduleDTO.getDay() + "-" + scheduleDTO.getHour() + "-" + scheduleDTO.getValueRepeat();
-        File file = new File(scheduleDTO.getJobName());
+        File file = new File("scheduler/" + scheduleDTO.getJobName());
         if (!file.exists()){
             file.createNewFile();
         }
@@ -445,6 +547,48 @@ public class JenkinService {
         FileWriter fw = new FileWriter(file, true);
         fw.write(value + "\n");
         fw.close();
+    }
+
+    //todo: dùng để update lại history.
+    public void writeFile(List<ScheduleDTO> scheduleDTOS) throws IOException {
+        File file = new File(scheduleDTOS.get(0).getJobName());
+        BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+        bw.close();
+        if (scheduleDTOS.size() == 0)
+            return;
+
+        for (int i = 0; i < scheduleDTOS.size(); i++){
+            writeFile(scheduleDTOS.get(i));
+        }
+    }
+
+    public void updateH(List<String> strings){
+        //convert DTO
+        //goi Ham writeFile
+    }
+    //@schedule
+    public void scheduler() throws IOException {
+        // lay all cac file
+        //doc tung file 1
+        // so sanh voi ngay hien tai
+        // update scm poll
+        File folder = new File("/Users/you/folder/");
+        File[] listOfFiles = folder.listFiles();
+
+        for (int i = 0; i < listOfFiles.length; i++){
+            List<String> datas = utils.readFile(listOfFiles[i].getName());
+            // tach date - so sanh
+            for (int j = 0; j < datas.size(); j++){
+                String date = datas.get(0).split("-")[0];
+                String hour = datas.get(0).split("-")[1];
+                String valueRepeat = datas.get(0).split("-")[2];
+                ScheduleDTO scheduleDTO = new ScheduleDTO();
+                scheduleDTO.setDay(date);
+                scheduleDTO.setHour(hour);
+                scheduleDTO.setValueRepeat(valueRepeat);
+                processSchedule(scheduleDTO, true);
+            }
+        }
     }
 
     private String processTimeData(String hour, String repeat){
@@ -475,6 +619,8 @@ public class JenkinService {
 
         return result;
     }
+
+
     public static void main(String[] args) throws IOException, ParseException {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
         LocalDateTime now = LocalDateTime.now();

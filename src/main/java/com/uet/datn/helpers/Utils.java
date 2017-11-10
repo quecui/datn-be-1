@@ -54,6 +54,12 @@ public class Utils {
         return true;
     }
 
+    public boolean deleteFile(String fileName){
+        File file = new File(fileName);
+        file.delete();
+        return true;
+    }
+
     public List<String> readFile(String fileName) throws IOException {
         List<String> strs = new ArrayList<String>();
 

@@ -91,8 +91,20 @@ public class Controller {
 
     @RequestMapping(value = "/jenkins/jobs/{jobName}/schedule", method = RequestMethod.POST)
     public String scheduleSCMPoll(@RequestBody ScheduleDTO scheduleDTO) throws IOException {
-        jenkinService.processSchedule(scheduleDTO);
+        jenkinService.processSchedule(scheduleDTO, false);
         return "ok";
     }
+
+    @RequestMapping(value = "/jenkins/jobs/{jobName}/schedule/history")
+    public List<String> getScheduleHistory(@PathVariable("jobName") String jobName) throws IOException {
+        return jenkinService.getHistory(jobName);
+    }
+
+    @RequestMapping(value = "/jenkins/jobs/{jobName}/schedule/history", method = RequestMethod.PUT)
+    public String updateScheduleHistory(@RequestBody List<String> strings, @PathVariable("jobName") String jobName){
+        jenkinService.updateH(strings);
+        return "ok";
+    }
+
 
 }
