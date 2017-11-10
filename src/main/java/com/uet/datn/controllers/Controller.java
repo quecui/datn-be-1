@@ -90,8 +90,8 @@ public class Controller {
     }
 
     @RequestMapping(value = "/jenkins/jobs/{jobName}/schedule", method = RequestMethod.POST)
-    public String scheduleSCMPoll(@RequestBody ScheduleDTO scheduleDTO){
-        System.out.println(scheduleDTO.getDay());//format data.
+    public String scheduleSCMPoll(@RequestBody ScheduleDTO scheduleDTO) throws IOException {
+        jenkinService.processSchedule(scheduleDTO);
         return "ok";
     }
 

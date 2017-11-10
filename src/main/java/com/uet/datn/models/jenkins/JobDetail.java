@@ -4,7 +4,7 @@ import java.util.List;
 
 public class JobDetail {
     private String _class;
-    private List<Action> actions;
+//    private List<Action> actions;
     private String description;
     private String displayName;
     private String displayNameOrNull;
@@ -22,9 +22,9 @@ public class JobDetail {
     private Build lastBuild;
     private Build lastCompletedBuild;
     private Build lastFailedBuild;
-    private String lastStableBuild;
-    private String lastSuccessfulBuild;
-    private String lastUnstableBuild;
+    private Build lastStableBuild;
+    private Build lastSuccessfulBuild;
+    private Build lastUnstableBuild;
     private Build lastUnsuccessfulBuild;
     private int nextBuildNumber;
     private List<Action> property;
@@ -42,13 +42,13 @@ public class JobDetail {
         this._class = _class;
     }
 
-    public List<Action> getActions() {
-        return actions;
-    }
-
-    public void setActions(List<Action> actions) {
-        this.actions = actions;
-    }
+//    public List<Action> getActions() {
+//        return actions;
+//    }
+//
+//    public void setActions(List<Action> actions) {
+//        this.actions = actions;
+//    }
 
     public String getDescription() {
         return description;
@@ -186,27 +186,27 @@ public class JobDetail {
         this.lastFailedBuild = lastFailedBuild;
     }
 
-    public String getLastStableBuild() {
+    public Build getLastStableBuild() {
         return lastStableBuild;
     }
 
-    public void setLastStableBuild(String lastStableBuild) {
+    public void setLastStableBuild(Build lastStableBuild) {
         this.lastStableBuild = lastStableBuild;
     }
 
-    public String getLastSuccessfulBuild() {
+    public Build getLastSuccessfulBuild() {
         return lastSuccessfulBuild;
     }
 
-    public void setLastSuccessfulBuild(String lastSuccessfulBuild) {
+    public void setLastSuccessfulBuild(Build lastSuccessfulBuild) {
         this.lastSuccessfulBuild = lastSuccessfulBuild;
     }
 
-    public String getLastUnstableBuild() {
+    public Build getLastUnstableBuild() {
         return lastUnstableBuild;
     }
 
-    public void setLastUnstableBuild(String lastUnstableBuild) {
+    public void setLastUnstableBuild(Build lastUnstableBuild) {
         this.lastUnstableBuild = lastUnstableBuild;
     }
 

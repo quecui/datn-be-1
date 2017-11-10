@@ -7,6 +7,15 @@ public class ScheduleDTO {
     private String day;
     private String hour;
     private String jobName;
+    private String valueRepeat;
+
+    public String getValueRepeat() {
+        return valueRepeat;
+    }
+
+    public void setValueRepeat(String valueRepeat) {
+        this.valueRepeat = valueRepeat;
+    }
 
     public String getJobName() {
         return jobName;

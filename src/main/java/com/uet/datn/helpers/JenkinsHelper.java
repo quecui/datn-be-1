@@ -20,7 +20,7 @@ public class JenkinsHelper {
     private final String USER = "/credentials/store/system/domain/_/createCredentials";
 
     public String getBuildJobUrl(String jobName, String buildToken){
-        return JENKINS_URL + "/job" + jobName + "/build?token=" + buildToken;
+        return JENKINS_URL + "/job/" + jobName + "/build?token=" + buildToken;
     }
 
     public String getAllJobUrl(){
@@ -81,7 +81,7 @@ public class JenkinsHelper {
         return JENKINS_URL + "/job/" + jobName + "/config.xml";
     }
 
-//    public String getCredentialUrl(){
-//        return JENKINS_URL +
-//    }
+    public String getEstimateTimeUrl(String jobName, int index){
+        return JENKINS_URL + "/job/" + jobName + "/" + index + "/api/json?pretty=true";
+    }
 }

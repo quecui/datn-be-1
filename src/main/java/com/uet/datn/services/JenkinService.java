@@ -1,6 +1,7 @@
 package com.uet.datn.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.uet.datn.dto.ScheduleDTO;
 import com.uet.datn.helpers.JenkinsHelper;
 import com.uet.datn.helpers.Utils;
 import com.uet.datn.helpers.validator.Credential;
@@ -22,9 +23,16 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.file.Files;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 @DependsOn("Credential")
@@ -54,10 +62,14 @@ public class JenkinService {
     }
 
     public void init(){
-        client = credential.setCredentialForJenkins(helper.USERNAME, helper.PASSWORD);
-        context = credential.setContext();
+        init1();
 
         getCSRFToken();
+    }
+
+    public void init1(){
+        client = credential.setCredentialForJenkins(helper.USERNAME, helper.PASSWORD);
+        context = credential.setContext();
     }
 
     private String getCSRFToken(){
@@ -110,13 +122,32 @@ public class JenkinService {
             HttpResponse response = client.execute(getReq, context);
             HttpEntity entity = response.getEntity();
             json = EntityUtils.toString(response.getEntity());
-
+            json = formatJson(json);
             ObjectMapper mapper = new ObjectMapper();
             jobDetail = mapper.readValue(json, JobDetail.class);
 
             maxBuild = jobDetail.getBuilds().size();
         }catch (Exception e){
             System.out.println(e.getMessage());
+        }
+
+        return json;
+    }
+
+    private String formatJson(String json){
+        String[] splitJson = json.split(",");
+        ArrayList<String> jsonList = new ArrayList<>(Arrays.asList(splitJson));
+        jsonList.remove(1);
+        jsonList.remove(1);
+        jsonList.remove(1);
+        jsonList.remove(1);
+
+        json = "";
+        for (int i = 0; i < jsonList.size(); i++){
+            json += jsonList.get(i);
+            if (i + 1 < jsonList.size()){
+                json += ",";
+            }
         }
 
         return json;
@@ -314,31 +345,64 @@ public class JenkinService {
 
     public String buildNow(String jobName) throws IOException {
         String buildToken = "stack";
-        String urlJob = helper.JENKINS_URL + "/job/" + jobName + "/build?token=" + buildToken;
+        int nextBuild = getBuildIndex(jobName);
+        String urlJob = helper.getBuildJobUrl(jobName, buildToken);
 
         HttpGet getRequest = new HttpGet(urlJob);
         HttpResponse response = client.execute(getRequest, context);
         int status = response.getStatusLine().getStatusCode();
 
         if (status == 201){
+
             System.out.println("Job: " + jobName.toUpperCase() + " has built !!!");
-            return "success";
+
+            return getEstimateTime(jobName, nextBuild);
         }else{
             System.out.println("Exception !!!");
             return "failure";
         }
     }
 
+    private int getBuildIndex(String jobName) throws IOException {
+        String url = helper.getJobDetailUrl(jobName);
+        JobDetail jobDetail = new JobDetail();
+
+        HttpGet getReq = new HttpGet(url);
+        HttpResponse response = client.execute(getReq, context);
+        HttpEntity entity = response.getEntity();
+        String json = EntityUtils.toString(response.getEntity());
+        json = formatJson(json);
+        ObjectMapper mapper = new ObjectMapper();
+        jobDetail = mapper.readValue(json, JobDetail.class);
+
+        return jobDetail.getNextBuildNumber();
+    }
+
+    private String getEstimateTime(String jobName, int index) throws IOException {
+        String json = "";
+        String url = helper.getEstimateTimeUrl(jobName, index);
+        HttpGet getRequest = new HttpGet(url);
+
+        while (true){
+            System.out.println("XY");
+
+            HttpResponse response = client.execute(getRequest, context);
+            int status = response.getStatusLine().getStatusCode();
+
+            if (status == 200){
+                System.out.println("OK Xy");
+                HttpEntity entity = response.getEntity();
+                json = EntityUtils.toString(response.getEntity());
+                break;
+            }
+            init1();
+        }
+        return json;
+    }
+
     // * * * * * : Build moi 5 phut
     // 20 16-17/1 * * 1-5: build moi 1 h 1 lan bat dau tu 16h20 - 17h20 cac ngay trong tuan
     public String scheduleSCMPolling(String jobName, String value) throws IOException {
-        switch (value){
-            case "1": value = "* * * * *"; break;
-
-            case "2": value = "20 16-17/1 * * 1-5"; break;
-
-            default: return "failure";
-        }
 
         String url = helper.JENKINS_URL + "/job/" + jobName + "/polling";
 
@@ -358,11 +422,63 @@ public class JenkinService {
         return "failure";
     }
 
-    public static void main(String[] args) throws IOException {
-        JenkinService jenkinService = new JenkinService();
+    public void processSchedule(ScheduleDTO scheduleDTO) throws IOException {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        String currentDate = simpleDateFormat.format(new Date()).toString();
+        if(currentDate.equals(scheduleDTO.getDay())){
+            String timeData = processTimeData(scheduleDTO.getHour(), scheduleDTO.getValueRepeat());
+            scheduleSCMPolling(scheduleDTO.getJobName(), timeData);
+        }else {
+            writeFile(scheduleDTO);
+            //toDo: Ham lap lich
+        }
+    }
 
-        jenkinService.init();
-        jenkinService.createJob("hungpham2");
+
+    private void writeFile(ScheduleDTO scheduleDTO) throws IOException {
+        String value = scheduleDTO.getDay() + "-" + scheduleDTO.getHour() + "-" + scheduleDTO.getValueRepeat();
+        File file = new File(scheduleDTO.getJobName());
+        if (!file.exists()){
+            file.createNewFile();
+        }
+
+        FileWriter fw = new FileWriter(file, true);
+        fw.write(value + "\n");
+        fw.close();
+    }
+
+    private String processTimeData(String hour, String repeat){
+        LocalDateTime now = LocalDateTime.now();
+        int currentDay = now.getDayOfMonth();
+        int currentMonth = now.getMonthValue();
+        String result = "TZ=Asia/Saigon H " + hour;
+
+        if (repeat.equals("no")) {
+            result += " " + currentDay + " " + currentMonth + " *";
+            return result;
+        }
+        if (repeat.equals("repeatWeek")){
+            int lastDay = currentDay + 7;
+            if (lastDay > 30){
+                lastDay = 30;
+            }
+
+            result += " " + currentDay + "-" + lastDay + " " + currentMonth + " *";
+            return result;
+        }
+
+        if (repeat.equals("repeatMonth")){
+            int lastDay = 30;
+            result += " " + currentDay + "-" + lastDay + " " + currentMonth + " *";
+            return result;
+        }
+
+        return result;
+    }
+    public static void main(String[] args) throws IOException, ParseException {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        LocalDateTime now = LocalDateTime.now();
+        System.out.println(now.getDayOfMonth());
     }
 
 
